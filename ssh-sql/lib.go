@@ -6,7 +6,6 @@ import (
 
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"time"
@@ -66,26 +65,17 @@ func GetConn(sshConf ConfSSH, dbConf ConfDB) (*sql.DB, error) {
 		if db, err = sql.Open("postgres+ssh",
 			fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable",
 				dbConf.User, dbConf.Pass, dbConf.Host, dbConf.DbName),
-		); err == nil {
-			log.Printf("Successfully connected to the db\n")
-			err := db.Ping()
-			if err != nil {
-				err = errors.New("can't ping to db: " + err.Error())
-				return nil, err
-			}
-			defer db.Close()
-
-		} else {
+		); err != nil {
 			err = errors.New("Failed to connect to the db: " + err.Error())
 			return nil, err
+		} else {
+			return db, nil
 		}
 
 	} else {
 		err = errors.New("Failed to connect to the ssh: " + err.Error())
 		return nil, err
 	}
-
-	return db, nil
 }
 
 type viaSSHDialer struct {
