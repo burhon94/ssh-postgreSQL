@@ -31,14 +31,14 @@ type ConfDB struct {
 	DbName string
 }
 
-func GetConn(sshConf ConfSSH, dbConf ConfDB) (*sql.DB, error) {
+func GetConn(sshConf ConfSSH, dbConf ConfDB) (*ssh.Client, *sql.DB, error) {
 	var agentClient agent.Agent
 	if conn, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK")); err == nil {
 		defer conn.Close()
 		agentClient = agent.NewClient(conn)
 	} else {
 		err = errors.New("SSH_SOCK is dial")
-		return nil, err
+		return nil, nil, err
 	}
 
 	sshConfig := &ssh.ClientConfig{
@@ -58,7 +58,7 @@ func GetConn(sshConf ConfSSH, dbConf ConfDB) (*sql.DB, error) {
 	}
 
 	if sshcon, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", sshConf.Host, sshConf.Port), sshConfig); err == nil {
-		defer sshcon.Close()
+		//defer sshcon.Close()
 
 		sql.Register("postgres+ssh", &viaSSHDialer{sshcon})
 
@@ -67,14 +67,14 @@ func GetConn(sshConf ConfSSH, dbConf ConfDB) (*sql.DB, error) {
 				dbConf.User, dbConf.Pass, dbConf.Host, dbConf.DbName),
 		); err != nil {
 			err = errors.New("Failed to connect to the db: " + err.Error())
-			return nil, err
+			return nil, nil, err
 		} else {
-			return db, nil
+			return sshcon, db, nil
 		}
 
 	} else {
 		err = errors.New("Failed to connect to the ssh: " + err.Error())
-		return nil, err
+		return nil, nil, err
 	}
 }
 
